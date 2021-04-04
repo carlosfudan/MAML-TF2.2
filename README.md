@@ -1,6 +1,6 @@
 # MAML-TF2.2
 
-  * paper: [Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks](https://arxiv.org/abs/1703.03400)
+  * paper :  [Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks](https://arxiv.org/abs/1703.03400)
 
 ## Requirements
 
@@ -20,7 +20,7 @@ datasets/omniglot
 2. Modify parameters in config.py, such as batchsize, lr ,update step, ...
   - train model -> please set cfg.mode = True
   - test model -> please set cfg.mode = False
-4. Run the main python script
+3. Run the main python script(trian or test)
 ```
 python main.py
 ```
