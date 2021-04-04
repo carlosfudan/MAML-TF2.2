@@ -1,5 +1,7 @@
 # MAML-TF2.2
 
+  * paper: [Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks](https://arxiv.org/abs/1703.03400)
+
 ## Requirements
 
 ``` pip install requirements.txt```
