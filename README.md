@@ -4,7 +4,9 @@
 
 ## Requirements
 
-``` pip install requirements.txt```
+``` 
+pip install requirements.txt
+```
 
 ## Datasets
 ### Omniglot
