@@ -24,9 +24,13 @@ n_way = 5
 k_shot = 1
 q_query = 1
 
-width = 28
-height = 28
+width = 32
+height = 32
 channel = 1
+
+eeg_width = 8
+eeg_height = 11
+eeg_channel = 1
 
 ckpt_dir = "./logs/ckpt/"
 save_path = "./logs/model/maml.h5"

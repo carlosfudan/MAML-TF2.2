@@ -6,6 +6,7 @@
 
 import copy
 import os
+import pickle
 import random
 
 import numpy as np
@@ -19,6 +20,7 @@ class DataIter(object):
     """
     将数据集路径列表变成迭代器，加快数据读取速度
     """
+
     def __init__(self, dataset):
         self.dataset = dataset
         self.current_num = 0
@@ -29,7 +31,6 @@ class DataIter(object):
         return self
 
     def __next__(self):
-
         # 防止迭代的列表越界
         if self.current_num >= len(self.dataset):
             # 当我们把列表的元素取完之后,要产生停止信号,
@@ -40,6 +41,28 @@ class DataIter(object):
         self.current_num += 1
 
         return ret
+
+
+def read_eeg_dataset(path):
+    sample_path = path + "3+3wyh_ntntwX2c.pkl"
+    label_path = path + "3+3wyh_ntntwy2c.pkl"
+    with open(sample_path, "rb") as f:
+        X = pickle.load(f)
+    with open(label_path, "rb") as f:
+        Y = pickle.load(f)
+
+    sample_path1 = path + "3+3wyh_ntntwfbX2c.pkl"
+    label_path1 = path + "3+3wyh_ntntwfby2c.pkl"
+    with open(sample_path1, "rb") as f:
+        X1 = pickle.load(f)
+    with open(label_path1, "rb") as f:
+        Y1 = pickle.load(f)
+
+    X = np.concatenate((X, X1), 0)
+    Y = np.concatenate((Y, Y1), 0)
+
+    from sklearn.model_selection import train_test_split
+    return train_test_split(X, Y, test_size=0.2, shuffle=True)
 
 
 def read_omniglot(path):
@@ -121,13 +144,13 @@ def read_miniimagenet(csv_path, one_class_img=600):
 
     image_list = list("./data/miniImageNet/images/" + csv.iloc[:, 0])
 
-    num_class = len(image_list) // one_class_img    # 总共有几类
+    num_class = len(image_list) // one_class_img  # 总共有几类
     classes = [[] for _ in range(num_class)]
 
     # 先按照类区分开
     for i in range(num_class):
         start = i * one_class_img
-        end = (i+1) * one_class_img
+        end = (i + 1) * one_class_img
         classes[i] = image_list[start: end]
 
     return classes
@@ -162,7 +185,6 @@ def process_one_task(one_task, width=cfg.width, height=cfg.height):
     task = []
 
     for img_path in one_task:
-
         image = tf.io.read_file(img_path)
         image = tf.image.decode_jpeg(image)
         # 将unit8转为float32且归一化
@@ -245,8 +267,3 @@ def task_split(classes: list, q_query=1, n_way=5, k_shot=1):
         dataset.append(one_task)
 
     return dataset
-
-
-
-
-

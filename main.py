@@ -4,16 +4,23 @@
 # @Author  : carlosliu
 # @File : main.py
 
-import os
 import time
 
-import tensorflow as tf
+from tensorflow.compat.v1 import ConfigProto, InteractiveSession
+from tensorflow.keras import losses, metrics, optimizers
+from tensorflow.keras.callbacks import TensorBoard
 from tqdm import tqdm
 
 import config as cfg
 from dataReader import *
 from meta_learner import MetaLearner
+from models.eeg_net import EEGNet, cnn, eeg_net, loss
+from models.svm import svm
 from train import maml_eval, maml_train_on_batch
+
+config = ConfigProto()
+config.gpu_options.allow_growth = True
+session = InteractiveSession(config=config)
 
 
 def load_model(model, dir):
@@ -23,7 +30,65 @@ def load_model(model, dir):
     return model
 
 
-def main():
+def svm_main():
+    from sklearn.metrics import accuracy_score
+    x_train, x_test, y_train, y_test = read_eeg_dataset("./datasets/")
+    x_train = x_train.astype('float32')
+    x_test = x_test.astype('float32')
+    y_train = y_train.astype('float32')
+    y_test = y_test.astype('float32')
+    x_train = np.reshape(x_train, (x_train.shape[0], -1))
+    x_test = np.reshape(x_test, (x_test.shape[0], -1))
+
+    model = svm()
+    model.fit(x_train, y_train)
+    res = model.predict(x_test)
+    print(accuracy_score(y_test, res))
+    # print(res)
+
+
+def eeg_net_main():
+    eegNet = eeg_net()
+    model = eegNet
+    model.get_layer("sequential").summary()
+
+    x_train, x_test, y_train, y_test = read_eeg_dataset("./datasets/")
+    x_train = x_train.astype('float32')
+    x_test = x_test.astype('float32')
+    y_train = y_train.astype('float32')
+    y_test = y_test.astype('float32')
+
+    x_train = np.expand_dims(x_train, -1)
+    x_test = np.expand_dims(x_test, -1)
+
+    split_data = int(x_train.shape[0] * 0.1)
+
+    x_val = x_train[-split_data:]
+    y_val = y_train[-split_data:]
+
+    x_train = x_train[:-split_data]
+    y_train = y_train[:-split_data]
+
+    model.compile(optimizer=optimizers.Adam(0.005),
+                  loss=losses.SparseCategoricalCrossentropy(),
+                  metrics=['accuracy'])  # 评价函数
+
+    history = model.fit(x_train, y_train, batch_size=300, epochs=600, validation_data=(x_val, y_val),
+                        callbacks=[TensorBoard(log_dir='./logs/eegnet', histogram_freq=1, update_freq="batch")])
+
+    print('history:')
+    print(history.history)
+
+    result = model.evaluate(x_test, y_test, batch_size=64)
+    print('evaluate:')
+    print(result)
+    pred = model.predict(x_test[:2])
+    print('predict:')
+    index = tf.math.argmax(pred[0]).numpy()
+    print(index)
+
+
+def MAML_main():
     gpus = tf.config.experimental.list_physical_devices("GPU")
     if gpus:
         for gpu in gpus:
@@ -35,7 +100,7 @@ def main():
         maml_model = load_model(maml_model, cfg.ckpt_dir)
         maml_model = MetaLearner.initialize(maml_model)
         maml_model.summary()
-        _, test_list = read_omniglot("./datasets/omniglot/images_evaluation")
+        _, test_list = read_omniglot("/home/carlos/code/last/MAML-keras/datasets/omniglot/images_evaluation")
         test_dataset = task_split(test_list, q_query=cfg.q_query, n_way=cfg.n_way, k_shot=cfg.k_shot)
         test_iter = DataIter(test_dataset)
         test_step = len(test_dataset) // cfg.eval_batch_size
@@ -49,7 +114,7 @@ def main():
     maml_model.summary()
     checkpoint = tf.train.Checkpoint(maml_model=maml_model)
 
-    train_list, valid_list = read_omniglot("./datasets/omniglot/images_background")
+    train_list, valid_list = read_omniglot("/home/carlos/code/last/MAML-keras/datasets/omniglot/images_background")
     train_dataset = task_split(train_list, q_query=cfg.q_query, n_way=cfg.n_way, k_shot=cfg.k_shot)
     valid_dataset = task_split(valid_list, q_query=cfg.q_query, n_way=cfg.n_way, k_shot=cfg.k_shot)
 
@@ -88,12 +153,12 @@ def main():
             train_loss.append(loss)
             train_acc.append(acc)
             process_bar.set_postfix({'loss': '{:.5f}'.format(loss), 'acc': '{:.5f}'.format(acc)})
-        
+
         # 输出平均后的训练结果
         print("\rtrain_loss:{:.4f} train_accuracy:{:.4f}".format(np.mean(train_loss), np.mean(train_acc)))
 
         if epoch % 10 == 0:
-            checkpoint.save(cfg.ckpt_dir+'maml_model.ckpt')
+            checkpoint.save(cfg.ckpt_dir + 'maml_model.ckpt')
             print("\rCheckpoint is saved")
 
         val_acc = []
@@ -131,4 +196,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    eeg_net_main()
